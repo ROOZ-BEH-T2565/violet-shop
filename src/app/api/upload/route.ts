@@ -51,7 +51,7 @@ export async function POST(req: Request) {
       .toBuffer();
 
     const dir = path.resolve(
-      process.cwd(),
+      /*turbopackIgnore: true*/ process.cwd(),
       process.env.UPLOAD_DIR ?? "public/uploads",
     );
     await mkdir(dir, { recursive: true });

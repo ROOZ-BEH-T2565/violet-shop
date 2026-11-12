@@ -45,9 +45,7 @@ next-env.d.ts
 # توجه: پوشه‌ی prisma/migrations باید commit شود، پس ignore نشده است.
 /src/generated
 
-# فونت کپی‌شده از پکیج vazirmatn (با scripts/copy-font.mjs ساخته می‌شود)
-# اگر می‌خواهید فونت داخل ریپو باشد، این خط را حذف کنید.
-/src/fonts/Vazirmatn-Variable.woff2
+# فونت src/fonts/Vazirmatn-Variable.woff2 عمداً commit می‌شود تا build روی Vercel به آن وابسته باشد.
 
 # تصاویر آپلودی (پوشه‌ی خالی با .gitkeep حفظ می‌شود)
 /public/uploads/*
