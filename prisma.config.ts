@@ -8,6 +8,8 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: process.env.DATABASE_URL!,
+    // دستورهای CLI (migrate، db seed و ...) از اتصال مستقیم استفاده کنند.
+    // اگر DIRECT_URL تعریف نشده بود (مثلاً دیتابیس لوکال)، همان DATABASE_URL استفاده می‌شود.
+    url: process.env.DIRECT_URL ?? process.env.DATABASE_URL!,
   },
 });
