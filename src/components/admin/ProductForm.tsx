@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ImagePlus, Loader2, X } from "lucide-react";
+import { X } from "lucide-react";
 import { toast } from "sonner";
 import { createProduct, updateProduct } from "@/actions/product";
 import { ProductImage } from "@/components/product/ProductImage";
@@ -38,6 +38,9 @@ const EMPTY: ProductValues = {
 const selectClass =
   "h-9 w-full rounded-md border bg-transparent px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
+// فقط آدرس‌های معتبر پیش‌نمایش داده می‌شوند تا هنگام تایپ، next/image خطا ندهد
+const PREVIEWABLE = /^(\/uploads\/[\w.-]+|https:\/\/\S+)$/;
+
 function Field({
   label,
   htmlFor,
@@ -60,9 +63,7 @@ function Field({
 
 export function ProductForm({ categories, productId, initialValues }: Props) {
   const router = useRouter();
-  const fileRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
-  const [uploading, setUploading] = useState(false);
   const isEdit = Boolean(productId);
 
   const {
@@ -78,32 +79,15 @@ export function ProductForm({ categories, productId, initialValues }: Props) {
   });
 
   const imageUrl = watch("imageUrl");
+  const previewSrc = imageUrl && PREVIEWABLE.test(imageUrl) ? imageUrl : null;
 
-  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    try {
-      const body = new FormData();
-      body.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body });
-      const data = (await res.json()) as { url?: string; error?: string };
-      if (!res.ok || !data.url)
-        throw new Error(data.error ?? "آپلود ناموفق بود.");
-
-      setValue("imageUrl", data.url, {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
-      toast.success("تصویر آپلود شد.");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "آپلود ناموفق بود.");
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  }
+  const setImageUrl = (value: string) => {
+    const trimmed = value.trim();
+    setValue("imageUrl", trimmed === "" ? null : trimmed, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  };
 
   const onSubmit = (values: ProductValues) =>
     startTransition(async () => {
@@ -233,52 +217,46 @@ export function ProductForm({ categories, productId, initialValues }: Props) {
 
       <div className="space-y-5">
         <div className="space-y-3 rounded-2xl border bg-card p-5">
-          <Label>تصویر محصول</Label>
+          <Label htmlFor="imageUrl">تصویر محصول</Label>
+
           <div className="group relative aspect-square overflow-hidden rounded-xl border bg-muted">
-            <ProductImage src={imageUrl} alt="پیش‌نمایش تصویر" sizes="320px" />
-            {uploading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-background/70">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              </div>
-            )}
+            <ProductImage
+              src={previewSrc}
+              alt="پیش‌نمایش تصویر"
+              sizes="320px"
+            />
           </div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            onChange={onFile}
-            className="hidden"
+
+          <Input
+            id="imageUrl"
+            type="url"
+            dir="ltr"
+            className="text-left"
+            placeholder="https://example.com/image.jpg"
+            value={imageUrl ?? ""}
+            onChange={(e) => setImageUrl(e.target.value)}
+            aria-invalid={!!errors.imageUrl}
           />
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-            >
-              <ImagePlus className="h-4 w-4" />
-              {imageUrl ? "تغییر تصویر" : "آپلود تصویر"}
-            </Button>
-            {imageUrl && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                aria-label="حذف تصویر"
-                onClick={() =>
-                  setValue("imageUrl", null, { shouldDirty: true })
-                }
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
+          <p className="text-xs leading-6 text-muted-foreground">
+            آدرس مستقیم تصویر را وارد کنید. باید با{" "}
+            <span dir="ltr">https://</span> شروع شود.
+          </p>
           {errors.imageUrl && (
             <p className="text-sm text-destructive">
               {errors.imageUrl.message}
             </p>
+          )}
+
+          {imageUrl && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setImageUrl("")}
+            >
+              <X className="h-4 w-4" />
+              حذف تصویر
+            </Button>
           )}
         </div>
 
@@ -306,11 +284,7 @@ export function ProductForm({ categories, productId, initialValues }: Props) {
         </div>
 
         <div className="flex gap-3">
-          <Button
-            type="submit"
-            className="flex-1"
-            disabled={pending || uploading}
-          >
+          <Button type="submit" className="flex-1" disabled={pending}>
             {pending
               ? "در حال ذخیره..."
               : isEdit
