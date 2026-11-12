@@ -20,8 +20,10 @@ export const authConfig = {
     },
     session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id ?? token.sub ?? "";
-        session.user.role = token.role ?? "USER";
+        // با typeof، به augmentation تایپ JWT وابسته نیستیم (token.* ممکن است unknown باشد)
+        session.user.id =
+          typeof token.id === "string" ? token.id : (token.sub ?? "");
+        session.user.role = token.role === "ADMIN" ? "ADMIN" : "USER";
       }
       return session;
     },
